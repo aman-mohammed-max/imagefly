@@ -4,12 +4,12 @@ Complete this file during the hackathon and use it to prepare your submission th
 
 ## Project
 
-- **Project name:** TODO
-- **Short description:** TODO — describe the problem, what you built, and who benefits.
-- **Code repository URL:** TODO
-- **Final submitted implementation commit SHA:** TODO
-- **Working demo URL or local demo steps:** TODO
-- **Demo access requirements:** TODO — explain any prerequisites without including private credentials.
+- **Project name:** Image Fixer
+- **Short description:** A browser image editor for removing, repairing, and moving selected image regions with AI inpainting while preserving untouched pixels.
+- **Code repository URL:** https://github.com/aman-mohammed-max/imagefly
+- **Final submitted implementation commit SHA:** TODO — fill with the final pushed commit.
+- **Working demo URL or local demo steps:** Install dependencies, set `OPENAI_API_KEY` in `.env.local`, run `npm run dev`, then open `http://localhost:3000`.
+- **Demo access requirements:** Node.js 20.9+, npm, network access, and an OpenAI API key with GPT Image access. Do not publish the key.
 
 ## Participants
 
@@ -17,18 +17,18 @@ Participate solo or in a team of up to 4. Remove unused rows.
 
 | Participant name | GitHub handle | Contribution |
 | --- | --- | --- |
-| TODO | TODO | TODO |
+| TODO — participant name | aman-mohammed-max | TODO — describe participant contribution |
 
 ## Run and demonstrate
 
-- **Prerequisites and versions:** TODO
-- **Install command:** TODO
-- **Required environment variable names:** TODO — use a sanitized example file if needed.
-- **Start command:** TODO
-- **Demo walkthrough:** TODO — brief steps showing the implemented features.
-- **Checks performed and results:** TODO
-- **Known limitations or incomplete features:** TODO
-- **Libraries, APIs, and public datasets used:** TODO — link sources and record attribution where required.
+- **Prerequisites and versions:** Node.js 20.9+, npm.
+- **Install command:** `npm install`
+- **Required environment variable names:** `OPENAI_API_KEY`; optional `IMAGE_MODEL` (defaults to `gpt-image-1`). See [.env.example](.env.example).
+- **Start command:** `npm run dev`
+- **Demo walkthrough:** Upload a photo; brush or polygon-select an object; optionally move/resize the cutout; add an instruction or remove it; compare before/after; export PNG.
+- **Checks performed and results:** `npm run build`, `npm run lint`, `npx tsc --noEmit`, and `git diff --check` passed. Production page returned HTTP 200. Sample image/mask POST returned HTTP 503 with the expected missing-key message; the actual provider edit was not tested because no API key was configured.
+- **Known limitations or incomplete features:** No automatic object segmentation or rotation; the user defines object boundaries. Provider output uses a reduced working resolution. Real OpenAI output remains unverified until run with a configured key.
+- **Libraries, APIs, and public datasets used:** Next.js, React, TypeScript, Tailwind CSS, React Konva, Sharp, and [OpenAI Images edit API](https://platform.openai.com/docs/api-reference/images/createEdit). No public datasets.
 - **AI usage record:** [AI_USAGE.md](AI_USAGE.md)
 - **Development change log:** [CHANGELOG.md](CHANGELOG.md)
 

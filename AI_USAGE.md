@@ -4,11 +4,13 @@ Use Codex during the hackathon and briefly document its actual contribution here
 
 ## Event build log
 
-No participant AI usage has been recorded yet. Replace the placeholder row as you build. Mark human review as pending until someone has reviewed the contribution.
+Mark human review as pending until someone has reviewed the contribution.
 
 | Date and time with timezone | Tool / model, if known | Task | Assistance and affected files | Human review / corrections | Validation and result |
 | --- | --- | --- | --- | --- | --- |
-| TODO | Codex | TODO | TODO | Pending | TODO |
+| 2026-10-10T21:11:02+02:00 | Codex | Complete the image move workflow and submission docs | Added source/destination mask separation, object resize/move, provider input sizing, and README/SUBMISSION setup/demo details. | Pending | Build, lint, TypeScript, and diff checks pass. Sample image upload reaches the provider boundary; genuine edit unavailable because `OPENAI_API_KEY` is unset. |
+| 2026-10-10T20:26:55+02:00 | Codex | Add object move/resize and verify the MVP | Implemented alpha cutout, Konva transform handles, separate source/destination compositing, and revised project documentation. | Pending | Production build, TypeScript, and lint passed. Local sample image/mask request returned the documented missing-key response; no genuine provider output was available. |
+| 2026-10-10T18:59:17+02:00 | Codex | Build the Image Fixer MVP | Created the Next.js editor, selection UI, inpainting route/provider, deterministic compositor, and project docs. | Pending | Confirmed the OpenAI image edit approach using its official API reference. Runtime/build and real-provider checks not run: Node/npm and `OPENAI_API_KEY` are unavailable in this environment. |
 
 ## Template preparation
 
