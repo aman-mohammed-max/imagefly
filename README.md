@@ -38,6 +38,7 @@ For production, run `npm run build` and `npm run start`. `npm run lint` runs ESL
 ## Stack and sources
 
 - Next.js, React, TypeScript, Tailwind CSS, React Konva, and Sharp.
+- React and React DOM use 19.2 with React Konva 19.2.x to stay compatible with the React 19.2 renderer bundled in Next.js 15.
 - OpenAI Images edit API (`gpt-image-1` by default), called only by the server route: [API reference](https://platform.openai.com/docs/api-reference/images/createEdit) and [image generation guide, including mask requirements and limitations](https://developers.openai.com/api/docs/guides/image-generation).
 
 ## Demo script

@@ -4,6 +4,13 @@ Record each meaningful project change during the event, newest first. Update thi
 
 ## Event build log
 
+## 2026-10-10T22:31:43+02:00 — Align React Konva with Next.js runtime
+
+- Changed: Pinned React and React DOM to 19.2 and React Konva to 19.2.x in `package.json` and `package-lock.json`; documented the compatibility constraint in `README.md`.
+- Why: Next.js 15 bundles a React 19.2 renderer, while React Konva 19.3 throws when loaded with a React runtime below 19.3.
+- Validation: Confirmed installed versions are React/React DOM 19.2.0 and React Konva 19.2.7. `npm run build`, `npm run lint`, `npx tsc --noEmit`, and `git diff --check` pass.
+- Limitations: React Konva and React/React DOM must remain on matching minor lines while using this Next.js 15 version.
+
 ## 2026-10-10T22:17:05+02:00 — Align React and react-konva versions
 
 - Changed: Upgraded `react`, `react-dom`, and `react-konva` to `19.3.0`; updated `@types/react` and `@types/react-dom` to `^19.3.0`.
