@@ -4,6 +4,13 @@ Record each meaningful project change during the event, newest first. Update thi
 
 ## Event build log
 
+## 2026-10-11T01:06:21+02:00 — Make eye detector initialization browser-safe
+
+- Changed: Load MediaPipe's ESM bundle directly from its CDN rather than through Next's client bundle transform, and check WebGL2 before initializing its Wasm runtime. Unsupported browsers now get an actionable error instead of a minified runtime exception.
+- Why: The minified message did not identify its call site. The recently added browser-only dependency in this workflow is MediaPipe's Wasm/WebGL landmark runtime, so its bundle loading and WebGL support now have explicit handling.
+- Validation: `npm run build`, `npm run lint`, `npx tsc --noEmit`, `npm test` (all 3 files), and `git diff --check` pass. Inspected the emitted client chunk and confirmed the MediaPipe vendor bundle is left as a direct browser ESM import.
+- Limitations: No browser is installed in this environment, so the detector runtime could not be exercised and the exact browser stack could not be captured. The user's console stack trace is still needed to confirm the failing MediaPipe call if the issue persists.
+
 ## 2026-10-11T00:56:16+02:00 — Correct iris selection and recoloring
 
 - Changed: Replaced screen-space mask scaling with source-resolution brush rasterization and explicit fit/zoom coordinate mapping; added a mask preview and smaller eye-selection brush. Added MediaPipe iris contour detection and a deterministic, luminance-aware iris recolor path with pupil/highlight protection and inside-only Gaussian feathering. Added alpha-correct compositing, real outside-mask preservation measurements, and regression tests for geometry, mapping, blending, preservation, prompts, and two-eye recoloring.

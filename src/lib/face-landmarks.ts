@@ -9,9 +9,18 @@ let landmarkerPromise: Promise<{ instance: FaceLandmarkerInstance }> | null = nu
 
 async function getLandmarker() {
   if (!landmarkerPromise) {
-    landmarkerPromise = import("@mediapipe/tasks-vision").then(async (module) => {
-      const wasm = await module.FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.0/wasm");
-      const instance = await module.FaceLandmarker.createFromOptions(wasm, {
+    landmarkerPromise = (async () => {
+      const canvas = document.createElement("canvas");
+      const gl = canvas.getContext("webgl2");
+      gl?.getExtension("WEBGL_lose_context")?.loseContext();
+      if (!gl) throw new Error("Iris detection needs WebGL2. Enable hardware acceleration or try a browser that supports WebGL2.");
+
+      // Keep this vendor bundle out of Next's Webpack transform. MediaPipe's
+      // browser runtime initializes its own Wasm/WebGL pipeline at load time.
+      const bundleUrl: string = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.0/vision_bundle.mjs";
+      const visionTasks = await import(/* webpackIgnore: true */ bundleUrl) as typeof import("@mediapipe/tasks-vision");
+      const wasm = await visionTasks.FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.0/wasm");
+      const instance = await visionTasks.FaceLandmarker.createFromOptions(wasm, {
         baseOptions: { modelAssetPath: "/models/face_landmarker.task" },
         runningMode: "IMAGE",
         numFaces: 5,
@@ -21,7 +30,7 @@ async function getLandmarker() {
         outputFacialTransformationMatrixes: false,
       });
       return { instance };
-    }).catch((error) => {
+    })().catch((error) => {
       landmarkerPromise = null;
       throw error;
     });
