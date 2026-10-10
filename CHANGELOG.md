@@ -4,6 +4,13 @@ Record each meaningful project change during the event, newest first. Update thi
 
 ## Event build log
 
+## 2026-10-10T21:12:55+02:00 — Record the implementation checkpoint
+
+- Changed: Recorded implementation commit `3427087978fb2dbdf4596d5d801cdf1bbdd064eb` in `SUBMISSION.md` and documented that push/submission remain pending.
+- Why: Keep the submission record tied to the actual code commit without claiming an unperformed push or event submission.
+- Validation: Confirmed the SHA with `git rev-parse HEAD`; local Markdown links and `git diff --check` are valid.
+- Limitations: Participant name/contribution, push, working public demo, and real API-backed image edit remain to be completed.
+
 ## 2026-10-10T21:11:02+02:00 — Finish move workflow and document the demo
 
 - Changed: Added alpha cutout move/resize interactions, source repair and destination compositing with separate masks, EXIF normalization, provider-compatible input sizing, and completed README/submission/demo records.

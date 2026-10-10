@@ -7,7 +7,7 @@ Complete this file during the hackathon and use it to prepare your submission th
 - **Project name:** Image Fixer
 - **Short description:** A browser image editor for removing, repairing, and moving selected image regions with AI inpainting while preserving untouched pixels.
 - **Code repository URL:** https://github.com/aman-mohammed-max/imagefly
-- **Final submitted implementation commit SHA:** TODO — fill with the final pushed commit.
+- **Final implementation commit SHA:** `3427087978fb2dbdf4596d5d801cdf1bbdd064eb` (local commit; push and organizer submission still pending).
 - **Working demo URL or local demo steps:** Install dependencies, set `OPENAI_API_KEY` in `.env.local`, run `npm run dev`, then open `http://localhost:3000`.
 - **Demo access requirements:** Node.js 20.9+, npm, network access, and an OpenAI API key with GPT Image access. Do not publish the key.
 
