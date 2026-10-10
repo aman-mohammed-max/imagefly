@@ -4,6 +4,13 @@ Record each meaningful project change during the event, newest first. Update thi
 
 ## Event build log
 
+## 2026-10-10T22:17:05+02:00 — Align React and react-konva versions
+
+- Changed: Upgraded `react`, `react-dom`, and `react-konva` to `19.3.0`; updated `@types/react` and `@types/react-dom` to `^19.3.0`.
+- Why: `react-konva@19.3` requires React ≥19.3. The project had React 19.1 with react-konva 19.0, causing a peer dependency mismatch and potential runtime errors.
+- Validation: `npm install` completed with exit code 0; `package.json` confirms matching `^19.3.0` for all three packages.
+- Limitations: 8 pre-existing audit vulnerabilities (1 moderate, 7 high) in transitive dev deps; not introduced by this change.
+
 ## 2026-10-10T21:42:13+02:00 — Verify a real AI image edit
 
 - Changed: Updated `README.md`, `SUBMISSION.md`, and `AI_USAGE.md` with the real-provider verification results.
