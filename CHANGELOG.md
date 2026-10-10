@@ -4,6 +4,13 @@ Record each meaningful project change during the event, newest first. Update thi
 
 ## Event build log
 
+## 2026-10-11T01:23:05+02:00 — Implement undo/redo, history panel, comparison modes, export options, and demo samples
+
+- Changed: Added lightweight undo/redo history engine (`Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z`), a visual history timeline with state jumping and descriptive operation names, enhanced selection tools (Select All, Invert, Clear, quick brush presets), 3 comparison modes (interactive split slider, instant A/B toggle, 2-Up side-by-side), workspace controls (fit, 1:1, zoom in/out, dimensions display, drag-and-drop upload, unsaved edits safeguard), full-resolution clean PNG/JPEG export without UI artifacts, bundled demo samples (park bench, brick wall, portrait) with quick action chips, and a keyboard shortcuts modal.
+- Why: Enhance usability, creative workflow reliability, and hackathon presentation without altering ongoing eye-recoloring and mask pipeline work.
+- Validation: Added unit tests for history transitions, branching, and export utilities. `npm test` (21 passing tests across 5 test suites), `npx tsc --noEmit`, `npm run lint`, and `npm run build` all completed with exit code 0.
+- Limitations: Full interactive dragging requires a browser supporting HTML5 Canvas and Pointer Events. Real OpenAI API calls still require `OPENAI_API_KEY`.
+
 ## 2026-10-11T00:56:16+02:00 — Correct iris selection and recoloring
 
 - Changed: Replaced screen-space mask scaling with source-resolution brush rasterization and explicit fit/zoom coordinate mapping; added a mask preview and smaller eye-selection brush. Added MediaPipe iris contour detection and a deterministic, luminance-aware iris recolor path with pupil/highlight protection and inside-only Gaussian feathering. Added alpha-correct compositing, real outside-mask preservation measurements, and regression tests for geometry, mapping, blending, preservation, prompts, and two-eye recoloring.
