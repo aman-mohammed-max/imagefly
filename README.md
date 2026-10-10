@@ -47,3 +47,7 @@ For production, run `npm run build` and `npm run start`. `npm run lint` runs ESL
 3. Choose **Remove object** or enter a custom repair instruction, then run the edit.
 4. Drag the before/after divider and read the outside-edited-areas pixel preservation metric.
 5. Export the edited PNG.
+
+## Verification sample
+
+A real OpenAI edit request through `/api/inpaint` succeeded with a local 1024×1024 PNG and a 28% square selection. The resulting PNG changed 82,368 pixels inside the selection and 0 of 966,207 pixels outside it; the route reported 100% outside-mask RGB preservation. This verifies the API and compositor path for that sample, not photographic quality across different images or selection shapes.

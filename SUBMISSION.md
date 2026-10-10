@@ -26,8 +26,8 @@ Participate solo or in a team of up to 4. Remove unused rows.
 - **Required environment variable names:** `OPENAI_API_KEY`; optional `IMAGE_MODEL` (defaults to `gpt-image-1`). See [.env.example](.env.example).
 - **Start command:** `npm run dev`
 - **Demo walkthrough:** Upload a photo; brush or polygon-select an object; optionally move/resize the cutout; add an instruction or remove it; compare before/after; export PNG.
-- **Checks performed and results:** `npm run build`, `npm run lint`, `npx tsc --noEmit`, and `git diff --check` passed. Production page returned HTTP 200. Sample image/mask POST returned HTTP 503 with the expected missing-key message; the actual provider edit was not tested because no API key was configured.
-- **Known limitations or incomplete features:** No automatic object segmentation or rotation; the user defines object boundaries. Provider output uses a reduced working resolution. Real OpenAI output remains unverified until run with a configured key.
+- **Checks performed and results:** `npm run build`, `npm run lint`, `npx tsc --noEmit`, and `git diff --check` passed during implementation. Production page returned HTTP 200. A real OpenAI image-edit request through the local API returned HTTP 200 for a 1024×1024 local PNG; 82,368 pixels changed inside the selection and 0 of 966,207 pixels changed outside it, with 100% reported preservation.
+- **Known limitations or incomplete features:** No automatic object segmentation or rotation; the user defines object boundaries. Provider output uses a reduced working resolution. The real-provider check used one PNG sample with a square mask and does not establish quality on photographic images or other selections.
 - **Libraries, APIs, and public datasets used:** Next.js, React, TypeScript, Tailwind CSS, React Konva, Sharp, and [OpenAI Images edit API](https://platform.openai.com/docs/api-reference/images/createEdit). No public datasets.
 - **AI usage record:** [AI_USAGE.md](AI_USAGE.md)
 - **Development change log:** [CHANGELOG.md](CHANGELOG.md)

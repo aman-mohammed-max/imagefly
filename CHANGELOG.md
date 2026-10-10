@@ -4,6 +4,13 @@ Record each meaningful project change during the event, newest first. Update thi
 
 ## Event build log
 
+## 2026-10-10T21:42:13+02:00 — Verify a real AI image edit
+
+- Changed: Updated `README.md`, `SUBMISSION.md`, and `AI_USAGE.md` with the real-provider verification results.
+- Why: Replace the earlier no-key limitation with observed results from the configured, real edit workflow.
+- Validation: Sent a local 1024×1024 PNG and a square selection mask through the running `/api/inpaint` route; OpenAI returned HTTP 200. The result changed 82,368 pixels inside the selection, 0 of 966,207 outside pixels, and reported 100% preservation.
+- Limitations: This was one graphic PNG sample rather than a photographic sample; it verifies the provider/compositor path and byte preservation for this mask, not broad generative quality.
+
 ## 2026-10-10T21:12:55+02:00 — Record the implementation checkpoint
 
 - Changed: Recorded implementation commit `3427087978fb2dbdf4596d5d801cdf1bbdd064eb` in `SUBMISSION.md` and documented that push/submission remain pending.
