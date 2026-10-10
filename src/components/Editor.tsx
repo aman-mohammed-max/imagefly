@@ -4,6 +4,9 @@
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Circle, Image as KonvaImage, Layer, Line, Stage, Transformer } from "react-konva/lib/ReactKonvaCore";
+import { canvasToImagePoint, imageToCanvasPoint, rasterizeSelectionMask, screenBrushToImageSize } from "@/lib/selection-mask.mjs";
+import { detectIrisRegions } from "@/lib/face-landmarks";
+import { parseEyeColorPrompt } from "@/lib/eye-prompts.mjs";
 import "konva/lib/shapes/Circle.js";
 import "konva/lib/shapes/Image.js";
 import "konva/lib/shapes/Line.js";
@@ -15,6 +18,22 @@ type Point = { x: number; y: number };
 type Stroke = { points: number[]; size: number };
 type MovingObject = { image: HTMLImageElement; url: string; x: number; y: number; width: number; height: number };
 
+function createMask(width: number, height: number, strokes: Stroke[], polygon: Point[]) {
+  const alpha = rasterizeSelectionMask(width, height, strokes, polygon) as Uint8ClampedArray;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d")!;
+  const pixels = context.createImageData(width, height);
+  for (let pixel = 0; pixel < alpha.length; pixel += 1) {
+    const offset = pixel * 4;
+    pixels.data[offset] = pixels.data[offset + 1] = pixels.data[offset + 2] = 255;
+    pixels.data[offset + 3] = alpha[pixel];
+  }
+  context.putImageData(pixels, 0, 0);
+  return canvas;
+}
+
 function readImage(file: File) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
@@ -24,44 +43,12 @@ function readImage(file: File) {
   });
 }
 
-function createMask(image: HTMLImageElement, strokes: Stroke[], polygon: Point[], scale: number) {
-  const canvas = document.createElement("canvas");
-  canvas.width = image.naturalWidth;
-  canvas.height = image.naturalHeight;
-  const context = canvas.getContext("2d")!;
-  context.scale(1 / scale, 1 / scale);
-  context.fillStyle = "#fff";
-  context.strokeStyle = "#fff";
-  context.lineCap = "round";
-  context.lineJoin = "round";
-  for (const stroke of strokes) {
-    if (stroke.size === 0) {
-      context.beginPath();
-      for (let i = 0; i < stroke.points.length; i += 2) {
-        if (i === 0) context.moveTo(stroke.points[i], stroke.points[i + 1]);
-        else context.lineTo(stroke.points[i], stroke.points[i + 1]);
-      }
-      context.closePath(); context.fill();
-    } else {
-      context.lineWidth = stroke.size; context.beginPath(); context.moveTo(stroke.points[0], stroke.points[1]);
-      for (let i = 2; i < stroke.points.length; i += 2) context.lineTo(stroke.points[i], stroke.points[i + 1]);
-      if (stroke.points.length === 2) context.lineTo(stroke.points[0] + 0.01, stroke.points[1]);
-      context.stroke();
-    }
-  }
-  if (polygon.length >= 3) {
-    context.beginPath(); polygon.forEach((point, index) => index === 0 ? context.moveTo(point.x, point.y) : context.lineTo(point.x, point.y));
-    context.closePath(); context.fill();
-  }
-  return canvas;
-}
-
 export default function Editor() {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [originalUrl, setOriginalUrl] = useState("");
   const [editedUrl, setEditedUrl] = useState("");
   const [tool, setTool] = useState<Tool>("brush");
-  const [brushSize, setBrushSize] = useState(36);
+  const [brushSize, setBrushSize] = useState(8);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [draft, setDraft] = useState<Stroke | null>(null);
   const [polygon, setPolygon] = useState<Point[]>([]);
@@ -72,12 +59,16 @@ export default function Editor() {
   const [comparison, setComparison] = useState(50);
   const [movingObject, setMovingObject] = useState<MovingObject | null>(null);
   const [moveMode, setMoveMode] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [showMaskPreview, setShowMaskPreview] = useState(false);
+  const [maskPreviewImage, setMaskPreviewImage] = useState<HTMLCanvasElement | null>(null);
   const [workspace, setWorkspace] = useState({ width: 900, height: 620 });
   const stageRef = useRef<Konva.Stage>(null);
   const movingNodeRef = useRef<Konva.Image>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const drawingRef = useRef(false);
+  const draftRef = useRef<Stroke | null>(null);
 
   useEffect(() => {
     const element = workspaceRef.current;
@@ -97,7 +88,22 @@ export default function Editor() {
   useEffect(() => () => { if (originalUrl) URL.revokeObjectURL(originalUrl); }, [originalUrl]);
   useEffect(() => () => { if (movingObject?.url) URL.revokeObjectURL(movingObject.url); }, [movingObject?.url]);
 
-  const scale = image ? Math.min(workspace.width / image.naturalWidth, workspace.height / image.naturalHeight, 1) : 1;
+  useEffect(() => {
+    if (!image) return setMaskPreviewImage(null);
+    const mask = createMask(image.naturalWidth, image.naturalHeight, strokes, polygon);
+    const overlay = document.createElement("canvas");
+    overlay.width = mask.width;
+    overlay.height = mask.height;
+    const context = overlay.getContext("2d")!;
+    context.fillStyle = "rgba(226, 82, 67, .52)";
+    context.fillRect(0, 0, overlay.width, overlay.height);
+    context.globalCompositeOperation = "destination-in";
+    context.drawImage(mask, 0, 0);
+    setMaskPreviewImage(overlay);
+  }, [image, strokes, polygon]);
+
+  const fitScale = image ? Math.min(workspace.width / image.naturalWidth, workspace.height / image.naturalHeight, 1) : 1;
+  const scale = fitScale * zoom;
   const canvasWidth = image ? image.naturalWidth * scale : 0;
   const canvasHeight = image ? image.naturalHeight * scale : 0;
 
@@ -111,6 +117,10 @@ export default function Editor() {
       setEditedUrl("");
       setStrokes([]);
       setPolygon([]);
+      setDraft(null);
+      draftRef.current = null;
+      setZoom(1);
+      setShowMaskPreview(false);
       setPreservation(null);
       setMovingObject(null);
       setMoveMode(false);
@@ -122,7 +132,21 @@ export default function Editor() {
 
   function position() {
     const pointer = stageRef.current?.getPointerPosition();
-    return pointer ? { x: pointer.x, y: pointer.y } : null;
+    // Konva reports logical canvas coordinates (not device-pixel-ratio backing pixels).
+    return pointer ? canvasToImagePoint(pointer, { scale, offsetX: 0, offsetY: 0 }) as Point : null;
+  }
+
+  function displayPoints(points: number[]) {
+    const transformed: number[] = [];
+    for (let i = 0; i + 1 < points.length; i += 2) {
+      const point = imageToCanvasPoint({ x: points[i], y: points[i + 1] }, { scale, offsetX: 0, offsetY: 0 }) as Point;
+      transformed.push(point.x, point.y);
+    }
+    return transformed;
+  }
+
+  function displayPolygon() {
+    return polygon.map((point) => imageToCanvasPoint(point, { scale, offsetX: 0, offsetY: 0 }) as Point);
   }
 
   function beginStroke() {
@@ -130,20 +154,27 @@ export default function Editor() {
     const point = position();
     if (!point) return;
     drawingRef.current = true;
-    setDraft({ points: [point.x, point.y], size: brushSize });
+    const next = { points: [point.x, point.y], size: screenBrushToImageSize(brushSize, scale) };
+    draftRef.current = next;
+    setDraft(next);
   }
 
   function continueStroke() {
-    if (!drawingRef.current || !draft) return;
+    const current = draftRef.current;
+    if (!drawingRef.current || !current) return;
     const point = position();
     if (!point) return;
-    setDraft({ ...draft, points: [...draft.points, point.x, point.y] });
+    const next = { ...current, points: [...current.points, point.x, point.y] };
+    draftRef.current = next;
+    setDraft(next);
   }
 
   function endStroke() {
     if (!drawingRef.current) return;
     drawingRef.current = false;
-    if (draft) setStrokes((current) => [...current, draft]);
+    const completed = draftRef.current;
+    if (completed) setStrokes((current) => [...current, completed]);
+    draftRef.current = null;
     setDraft(null);
   }
 
@@ -155,14 +186,14 @@ export default function Editor() {
 
   async function prepareMove() {
     if (!image || !hasSelection) return;
-    const mask = createMask(image, strokes, polygon, scale);
+    const mask = createMask(image.naturalWidth, image.naturalHeight, strokes, polygon);
     const pixels = mask.getContext("2d")!.getImageData(0, 0, mask.width, mask.height).data;
     let left = mask.width, top = mask.height, right = 0, bottom = 0;
     for (let y = 0; y < mask.height; y += 1) for (let x = 0; x < mask.width; x += 1) {
       if (pixels[(y * mask.width + x) * 4 + 3] > 0) { left = Math.min(left, x); top = Math.min(top, y); right = Math.max(right, x); bottom = Math.max(bottom, y); }
     }
     if (right <= left || bottom <= top) return setError("Select an area before moving it.");
-    const padding = Math.max(1, Math.round(brushSize / scale));
+    const padding = Math.max(1, Math.round(screenBrushToImageSize(brushSize, scale)));
     left = Math.max(0, left - padding); top = Math.max(0, top - padding);
     right = Math.min(mask.width - 1, right + padding); bottom = Math.min(mask.height - 1, bottom + padding);
     const cutout = document.createElement("canvas"); cutout.width = mask.width; cutout.height = mask.height;
@@ -197,7 +228,7 @@ export default function Editor() {
 
   async function runEdit() {
     if (!image || !stageRef.current || (moveMode && !movingObject)) return;
-    const canvas = createMask(image, strokes, polygon, scale);
+    const canvas = createMask(image.naturalWidth, image.naturalHeight, strokes, polygon);
 
     setBusy(true);
     setError("");
@@ -208,6 +239,12 @@ export default function Editor() {
       form.append("image", sourceBlob, "source.png");
       form.append("mask", mask, "mask.png");
       form.append("prompt", prompt);
+      if (!moveMode && parseEyeColorPrompt(prompt)) {
+        if (!image) throw new Error("Load an image before changing eye color.");
+        const irisRegions = await detectIrisRegions(image);
+        if (!irisRegions.length) throw new Error("No clear irises were detected. Use a front-facing portrait and try again.");
+        form.append("irisRegions", JSON.stringify(irisRegions));
+      }
       if (moveMode && movingObject) {
         form.append("mode", "move");
         form.append("overlay", await (await fetch(movingObject.url)).blob(), "selected-object.png");
@@ -246,9 +283,10 @@ export default function Editor() {
         <div className="panel-heading"><div><span className="step-index">01</span><h2>Select area</h2></div><button className="icon-button" title="Selection help">?</button></div>
         <div className="tool-switch"><button className={tool === "brush" ? "tool active" : "tool"} onClick={() => setTool("brush")}><span>◉</span> Brush</button><button className={tool === "polygon" ? "tool active" : "tool"} onClick={() => setTool("polygon")}><span>⬡</span> Polygon</button></div>
         {hasSelection && <button className={moveMode ? "move-selection active" : "move-selection"} onClick={() => moveMode ? setMoveMode(false) : void prepareMove()}>{moveMode ? "↗ Object ready · drag to place" : "↗ Move / resize selection"}</button>}
-        {tool === "brush" && <label className="slider-label">Brush size <span>{brushSize}px</span><input type="range" min="8" max="100" value={brushSize} onChange={(event) => setBrushSize(Number(event.target.value))} /></label>}
+        {tool === "brush" && <label className="slider-label">Brush size <span>{brushSize}px</span><input type="range" min="2" max="48" value={brushSize} onChange={(event) => setBrushSize(Number(event.target.value))} /></label>}
         {tool === "polygon" && <p className="helper-copy">Click to add points. Double click to finish a shape.</p>}
-        <div className="selection-actions"><button className="quiet-button" onClick={undo} disabled={!hasSelection}>↶ Undo</button><button className="quiet-button" onClick={() => { setStrokes([]); setPolygon([]); setMovingObject(null); setMoveMode(false); }} disabled={!hasSelection}>Clear</button></div>
+        {tool === "brush" && <p className="helper-copy eye-help">For eye color, zoom in and mark each iris separately. Include the pupil; avoid painting over eyelids or skin.</p>}
+        <div className="selection-actions"><button className="quiet-button" onClick={undo} disabled={!hasSelection}>↶ Undo</button><button className="quiet-button" onClick={() => { setShowMaskPreview((shown) => !shown); }} disabled={!hasSelection} aria-pressed={showMaskPreview}>{showMaskPreview ? "Hide mask" : "Mask preview"}</button><button className="quiet-button" onClick={() => { setStrokes([]); setPolygon([]); setMovingObject(null); setMoveMode(false); }} disabled={!hasSelection}>Clear</button></div>
         <div className="panel-divider" />
         <div className="panel-heading compact"><div><span className="step-index">02</span><h2>Tell us what to do</h2></div></div>
         <div className="prompt-card"><div className="prompt-title"><span>✦</span> AI INSTRUCTION <span className="optional">OPTIONAL</span></div><textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="e.g. Remove the person and continue the brick wall naturally…" rows={5} /></div>
@@ -258,12 +296,12 @@ export default function Editor() {
       </aside>
 
       <div className="canvas-column">
-        <div className="canvas-toolbar"><div className="canvas-title">{image ? "Untitled edit" : "Untitled canvas"}<span className="unsaved-dot" /></div><div className="canvas-tools"><button title="Zoom out">−</button><span>{image ? `${Math.round(scale * 100)}%` : "100%"}</span><button title="Zoom in">+</button><i /><button title="Fit to canvas">⛶</button></div></div>
+        <div className="canvas-toolbar"><div className="canvas-title">{image ? "Untitled edit" : "Untitled canvas"}<span className="unsaved-dot" /></div><div className="canvas-tools"><button title="Zoom out" aria-label="Zoom out" onClick={() => setZoom((value) => Math.max(1, Math.round((value - 0.25) * 100) / 100))} disabled={zoom <= 1}>−</button><span>{image ? `${Math.round(zoom * 100)}%` : "100%"}</span><button title="Zoom in" aria-label="Zoom in" onClick={() => setZoom((value) => Math.min(2.5, Math.round((value + 0.25) * 100) / 100))} disabled={zoom >= 2.5}>+</button><i /><button title="Fit to canvas" aria-label="Fit to canvas" onClick={() => setZoom(1)}>⛶</button></div></div>
         <div ref={workspaceRef} className={`workspace ${image ? "has-image" : ""}`}>
           {!image ? <label className="upload-card" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void loadFile(event.dataTransfer.files[0]); }}><div className="upload-art"><span>▧</span><i>✦</i><i>✦</i></div><strong>Bring an image to life</strong><p>Drop a photo here, or browse files</p><span className="browse-button">Choose an image</span><small>PNG, JPEG, or WebP · up to 18 MB</small><input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleFile} /></label> : <div className="image-frame" style={{ width: canvasWidth, height: canvasHeight }}>
-            {editedUrl ? <div className="comparison" style={{ width: canvasWidth, height: canvasHeight }}><img src={originalUrl} alt="Original" /><div className="comparison-after" style={{ clipPath: `inset(0 ${100 - comparison}% 0 0)` }}><img src={editedUrl} alt="Edited result" /></div><div className="comparison-divider" style={{ left: `${comparison}%` }}><span>↔</span></div><div className="compare-label before">BEFORE</div><div className="compare-label after">AFTER</div><input aria-label="Before and after comparison" className="comparison-range" type="range" min="0" max="100" value={comparison} onChange={(event) => setComparison(Number(event.target.value))} /></div> : <Stage ref={stageRef} width={canvasWidth} height={canvasHeight} onMouseDown={beginStroke} onMouseMove={continueStroke} onMouseUp={endStroke} onTouchStart={beginStroke} onTouchMove={continueStroke} onTouchEnd={endStroke} onClick={() => { if (!moveMode && tool === "polygon") { const point = position(); if (point) setPolygon((current) => [...current, point]); } }} onDblClick={commitPolygon}>
+            {editedUrl ? <div className="comparison" style={{ width: canvasWidth, height: canvasHeight }}><img src={originalUrl} alt="Original" /><div className="comparison-after" style={{ clipPath: `inset(0 ${100 - comparison}% 0 0)` }}><img src={editedUrl} alt="Edited result" /></div><div className="comparison-divider" style={{ left: `${comparison}%` }}><span>↔</span></div><div className="compare-label before">BEFORE</div><div className="compare-label after">AFTER</div><input aria-label="Before and after comparison" className="comparison-range" type="range" min="0" max="100" value={comparison} onChange={(event) => setComparison(Number(event.target.value))} /></div> : <Stage ref={stageRef} width={canvasWidth} height={canvasHeight} onMouseDown={beginStroke} onMouseMove={continueStroke} onMouseUp={endStroke} onMouseLeave={endStroke} onTouchStart={beginStroke} onTouchMove={continueStroke} onTouchEnd={endStroke} onClick={() => { if (!moveMode && tool === "polygon") { const point = position(); if (point) setPolygon((current) => [...current, point]); } }} onDblClick={commitPolygon}>
               <Layer><KonvaImage image={image} width={canvasWidth} height={canvasHeight} /></Layer>
-              <Layer listening={false}>{strokes.map((stroke, index) => <Line key={index} points={stroke.points} closed={stroke.size === 0} fill={stroke.size === 0 ? "rgba(230,75,76,.38)" : undefined} stroke="rgba(230,75,76,.72)" strokeWidth={stroke.size || 2} lineCap="round" lineJoin="round" />)}{draft && <Line points={draft.points} stroke="rgba(230,75,76,.72)" strokeWidth={draft.size} lineCap="round" lineJoin="round" />}{polygon.length > 0 && <><Line points={polygon.flatMap((point) => [point.x, point.y])} stroke="#ef5350" strokeWidth={2} lineCap="round" lineJoin="round" />{polygon.map((point, index) => <Circle key={index} x={point.x} y={point.y} radius={3} fill="#fff" stroke="#ef5350" strokeWidth={2} />)}</>}</Layer>
+              <Layer listening={false}>{showMaskPreview && maskPreviewImage ? <KonvaImage image={maskPreviewImage} width={canvasWidth} height={canvasHeight} /> : <>{strokes.map((stroke, index) => <Line key={index} points={displayPoints(stroke.points)} closed={stroke.size === 0} fill={stroke.size === 0 ? "rgba(230,75,76,.38)" : undefined} stroke="rgba(230,75,76,.72)" strokeWidth={stroke.size ? stroke.size * scale : 2} lineCap="round" lineJoin="round" />)}{draft && <Line points={displayPoints(draft.points)} stroke="rgba(230,75,76,.72)" strokeWidth={draft.size * scale} lineCap="round" lineJoin="round" />}</>}{polygon.length > 0 && <><Line points={displayPolygon().flatMap((point) => [point.x, point.y])} stroke="#ef5350" strokeWidth={2} lineCap="round" lineJoin="round" />{displayPolygon().map((point, index) => <Circle key={index} x={point.x} y={point.y} radius={3} fill="#fff" stroke="#ef5350" strokeWidth={2} />)}</>}</Layer>
               {moveMode && movingObject && <Layer><KonvaImage ref={movingNodeRef} image={movingObject.image} x={movingObject.x} y={movingObject.y} width={movingObject.width} height={movingObject.height} draggable dragBoundFunc={(position) => ({ x: Math.max(0, Math.min(canvasWidth - movingObject.width, position.x)), y: Math.max(0, Math.min(canvasHeight - movingObject.height, position.y)) })} onDragEnd={(event) => setMovingObject({ ...movingObject, x: event.target.x(), y: event.target.y() })} onTransformEnd={finishTransform} /><Transformer ref={transformerRef} rotateEnabled={false} keepRatio={false} boundBoxFunc={(oldBox, newBox) => newBox.x < 0 || newBox.y < 0 || newBox.x + newBox.width > canvasWidth || newBox.y + newBox.height > canvasHeight ? oldBox : newBox} enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right", "middle-left", "middle-right", "top-center", "bottom-center"]} /></Layer>}
             </Stage>}
           </div>}

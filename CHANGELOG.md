@@ -4,6 +4,13 @@ Record each meaningful project change during the event, newest first. Update thi
 
 ## Event build log
 
+## 2026-10-11T00:56:16+02:00 — Correct iris selection and recoloring
+
+- Changed: Replaced screen-space mask scaling with source-resolution brush rasterization and explicit fit/zoom coordinate mapping; added a mask preview and smaller eye-selection brush. Added MediaPipe iris contour detection and a deterministic, luminance-aware iris recolor path with pupil/highlight protection and inside-only Gaussian feathering. Added alpha-correct compositing, real outside-mask preservation measurements, and regression tests for geometry, mapping, blending, preservation, prompts, and two-eye recoloring.
+- Why: The previous brush width was divided by the fit scale after its points had already been converted to image pixels, creating oversized circular masks. Raw general-purpose inpainting then changed the surrounding eye region and left hard circular seams.
+- Validation: Reproduced the circular artifacts with a real OpenAI edit before the fix. `npm test` (3 test files), `npm run build`, `npm run lint`, `npx tsc --noEmit`, and `git diff --check` pass. A local API request on a real portrait returned HTTP 200, recolored 1,102 pixels across two manually supplied iris regions, and measured 100% exact RGB preservation outside the permitted iris mask.
+- Limitations: The supplied report screenshot was not attached. Automatic MediaPipe detection was compiled but not exercised in a browser; the real portrait API regression supplied manually measured iris contours. MediaPipe's matching WASM runtime is fetched from jsDelivr.
+
 ## 2026-10-10T22:31:43+02:00 — Align React Konva with Next.js runtime
 
 - Changed: Pinned React and React DOM to 19.2 and React Konva to 19.2.x in `package.json` and `package-lock.json`; documented the compatibility constraint in `README.md`.

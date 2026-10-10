@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import sharp from "sharp";
-import { compositeSelection, createProviderMask } from "@/lib/composite";
+import { compositeSelection, createProviderMask } from "@/lib/composite.mjs";
+import { parseEyeColorPrompt } from "@/lib/eye-prompts.mjs";
+import { recolorIrises } from "@/lib/eye-recolor.mjs";
 import { getImageProvider } from "@/lib/image-provider";
 
 export const runtime = "nodejs";
@@ -36,6 +38,31 @@ export async function POST(request: Request) {
     const original = await sharp(uploaded).rotate().png().toBuffer();
     const metadata = await sharp(original).metadata();
     if (!metadata.width || !metadata.height) return NextResponse.json({ error: "Could not read image dimensions." }, { status: 400 });
+    const maskMetadata = await sharp(selection).metadata();
+    if (maskMetadata.width !== metadata.width || maskMetadata.height !== metadata.height) {
+      return NextResponse.json({ error: "The selection mask does not match the displayed image dimensions. Reload the image and redraw the selection." }, { status: 400 });
+    }
+    const eyeColor = mode !== "move" ? parseEyeColorPrompt(promptValue.trim()) : null;
+    if (eyeColor) {
+      const irisRegionsValue = form.get("irisRegions");
+      if (typeof irisRegionsValue !== "string" || irisRegionsValue.length > 20_000) {
+        return NextResponse.json({ error: "Iris landmarks are missing. Use a clear front-facing portrait and try again." }, { status: 422 });
+      }
+      try {
+        const irisRegions = JSON.parse(irisRegionsValue) as Array<Array<{ x: number; y: number }>>;
+        const recolored = await recolorIrises(original, selection, eyeColor, irisRegions);
+        return NextResponse.json({
+          image: `data:image/png;base64,${recolored.image.toString("base64")}`,
+          preservationPercent: Number(recolored.preservationPercent.toFixed(2)),
+          dimensions: { width: metadata.width, height: metadata.height },
+          operation: "iris-recolor",
+          eyesDetected: recolored.eyesDetected,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Could not recolor the selected irises.";
+        return NextResponse.json({ error: message }, { status: 422 });
+      }
+    }
     const sourceScale = Math.min(1, 1536 / Math.max(metadata.width, metadata.height));
     const sourceWidth = Math.max(1, Math.round(metadata.width * sourceScale));
     const sourceHeight = Math.max(1, Math.round(metadata.height * sourceScale));
