@@ -13,11 +13,21 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open <http://localhost:3000>. Select a PNG, JPEG, or WebP under 18 MB, paint or draw a polygon around the area, enter an instruction or leave it blank to remove an object, then choose **Fix selected area**. Drag the divider to compare before and after. Export PNG downloads the full edited image.
+Open <http://localhost:3000>. Choose an image or click one of the bundled demo samples (Park Bench for object removal, Brick Wall for background repair, Portrait for eye recoloring). Paint or draw a polygon around the area, enter an instruction (or click a quick prompt chip), and select **Fix selected area**.
+
+### Workflow and controls
+
+- **Undo & Redo**: Full keyboard support (`Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z` / `Ctrl+Y`) and header/history controls.
+- **Editing History**: Interactive history panel tracking operations with meaningful names; click any step to restore that exact canvas and selection state.
+- **Selection Tools**: Brush and polygon tools, quick brush size presets (4px, 8px, 16px, 24px, 36px), Select All, Invert Selection, and Clear Selection.
+- **Before & After Comparison**: Interactive split slider, instant A/B toggle view, and 2-Up side-by-side view. Scroll over the comparison to zoom toward the pointer, drag to pan, or use the zoom controls; the original and edited layers always share one transform.
+- **Workspace Controls**: Fit-to-screen (`⛶`), 1:1 actual pixels, zoom in/out with percentage readout, drag-and-drop upload, unsaved edit safeguards, and dimensions display.
+- **Clean Export**: Export in PNG (lossless) or JPEG (high quality) at full native resolution without capturing editor controls, selection outlines, or UI overlays.
+- **Keyboard Shortcuts**: Press `?` anytime for the in-app shortcut and editing guide.
 
 For eye recoloring, zoom in and brush over the iris or irises, then use an instruction such as **“make it green eye.”** Face landmarks narrow each selection to the iris boundary; a local color transform preserves luminance and leaves dark pupils and bright catchlights untouched. The recolor is deterministic and does not call the generative image provider.
 
-For production, run `npm run build` and `npm run start`. `npm run lint` runs ESLint, `npx tsc --noEmit` checks types, and `npm test` runs the mask, transform, compositing, preservation, and eye recoloring tests.
+For production, run `npm run build` and `npm run start`. `npm run lint` runs ESLint, `npx tsc --noEmit` checks types, and `npm test` runs the unit tests (history manager, export helpers, mask rasterization, transforms, compositing, preservation, and eye recoloring).
 
 ## Editing pipeline
 
