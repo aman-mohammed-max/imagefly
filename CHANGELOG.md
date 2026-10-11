@@ -4,6 +4,13 @@ Record each meaningful project change during the event, newest first. Update thi
 
 ## Event build log
 
+## 2026-10-11T02:46:00+02:00 — Add synchronized comparison zoom and pan
+
+- Changed: Added cursor-centered zoom, pointer drag panning, zoom percentage, and reset controls to the comparison viewer. Added unit tests for cursor anchoring, zoom limits, and a shared transform. Affected files: `ComparisonView.tsx`, `comparison-viewport.mjs`, its test, and comparison styles.
+- Why: Let users inspect small edits closely while keeping original and edited pixels aligned across all comparison modes.
+- Validation: `npm test` passed all 6 test files, including the new viewport math tests; `npm run lint`, `npx tsc --noEmit`, `npm run build`, and `git diff --check` all passed.
+- Limitations: Pointer interactions were not manually exercised in a browser, especially on touch devices; the app has no browser automation dependency.
+
 ## 2026-10-11T01:23:05+02:00 — Implement undo/redo, history panel, comparison modes, export options, and demo samples
 
 - Changed: Added lightweight undo/redo history engine (`Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z`), a visual history timeline with state jumping and descriptive operation names, enhanced selection tools (Select All, Invert, Clear, quick brush presets), 3 comparison modes (interactive split slider, instant A/B toggle, 2-Up side-by-side), workspace controls (fit, 1:1, zoom in/out, dimensions display, drag-and-drop upload, unsaved edits safeguard), full-resolution clean PNG/JPEG export without UI artifacts, bundled demo samples (park bench, brick wall, portrait) with quick action chips, and a keyboard shortcuts modal.
